@@ -31,5 +31,7 @@
 *.out
 *.app
 *.o
+*.nsys-rep
 
 build/
+.vscode/

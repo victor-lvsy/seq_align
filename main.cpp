@@ -1,13 +1,14 @@
+#include <cuda_runtime.h>
 #include <fstream>
 #include <time.h>
-#include "nw.h"
+#include "include/nw.h"
+#include "include/nw1.cuh"
 
 using namespace std;
 
 
 int  main( int argc, char ** argv )
 {
-        size_t len;
         // Sequences to be aligned
         char  *seq_1;
         char  *seq_2; 
@@ -65,12 +66,11 @@ int  main( int argc, char ** argv )
     dt1 = (t2.tv_sec - t1.tv_sec)  + (double) (t2.tv_nsec - t1.tv_nsec) * 1e-9  ;
     double time=dt1*1000 ;
 
+    nw1(seq_1_std, seq_2_std, 1, -1, -1);
 
+    printf("\n\n%10f kernel Time elapsed \n", time);
 
-    printf("\n\n%10f kernel Time elapsed \n", time);    
-
-
-       return  0 ;
+    return  0 ;
 }
 
 
