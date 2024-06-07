@@ -17,19 +17,23 @@ __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     
     for (int diag = 2; diag <= total_diagonals; ++diag) {
-        int i = diag - tid;
-        int j = tid;
-        if (i >= 1 && i <= n && j >= 1 && j <= m) {
+        int first_i = max(1, diag - m); // Calculate start i index for the current diagonal
+        int last_i = min(n, diag - 1);  // Calculate end i index for the current diagonal
+        int elements_in_diag = last_i - first_i + 1; // Number of elements in the current diagonal
+
+        if (tid < elements_in_diag) {
+            int i = last_i - tid; // Mapping tid to i
+            int j = diag - i; // Mapping i to j
             int idx = i * (m + 1) + j;
-            int match_score = (d_seq1[i - 1] == d_seq2[j - 1]) ? match : mismatch;
-            d_score[idx] = max(
-                d_score[(i - 1) * (m + 1) + (j - 1)] + match_score,
-                max(
-                    d_score[(i - 1) * (m + 1) + j] + gap,
-                    d_score[i * (m + 1) + (j - 1)] + gap
-                )
-            );
-        }
+            if (i <= n && j <= m) {
+                int match_score = (d_seq1[i - 1] == d_seq2[j - 1]) ? match : mismatch;
+                d_score[idx] = max(
+                    d_score[(i - 1) * (m + 1) + (j - 1)] + match_score,
+                    max(
+                        d_score[(i - 1) * (m + 1) + j] + gap,
+                        d_score[i * (m + 1) + (j - 1)] + gap));
+            }
+          }
         __syncthreads();
     }
 }
@@ -47,14 +51,14 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     char *d_seq1, *d_seq2;
     
     // Allocate memory on GPU
-    cudaMalloc(&d_score, (n + 1) * (m + 1) * sizeof(int));
-    cudaMalloc(&d_seq1, n * sizeof(char));
-    cudaMalloc(&d_seq2, m * sizeof(char));
+    CHECK(cudaMalloc(&d_score, (n + 1) * (m + 1) * sizeof(int)));
+    CHECK(cudaMalloc(&d_seq1, n * sizeof(char)));
+    CHECK(cudaMalloc(&d_seq2, m * sizeof(char)));
     
     // Copy sequences to GPU
-    cudaMemcpy(d_seq1, seq1.data(), n * sizeof(char), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_seq2, seq2.data(), m * sizeof(char), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_score, h_score, (n + 1) * (m + 1) * sizeof(int), cudaMemcpyHostToDevice);
+    CHECK(cudaMemcpy(d_seq1, seq1.data(), n * sizeof(char), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_seq2, seq2.data(), m * sizeof(char), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_score, h_score, (n + 1) * (m + 1) * sizeof(int), cudaMemcpyHostToDevice));
     
     int num_threads = max(n, m);
     int num_blocks = (num_threads + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
@@ -62,17 +66,21 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     
     // Initialize borders of the matrix on GPU
     init_borders<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
+    CHECK_KERNELCALL();
+    CHECK(cudaDeviceSynchronize());
     
     // Fill the matrix on GPU
     fill_matrix<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
+    CHECK_KERNELCALL();
+    CHECK(cudaDeviceSynchronize());
     
     // Copy score matrix back to CPU
-    cudaMemcpy(h_score, d_score, (n + 1) * (m + 1) * sizeof(int), cudaMemcpyDeviceToHost);
+    CHECK(cudaMemcpy(h_score, d_score, (n + 1) * (m + 1) * sizeof(int), cudaMemcpyDeviceToHost));
     
     // Clean up GPU memory
-    cudaFree(d_score);
-    cudaFree(d_seq1);
-    cudaFree(d_seq2);
+    CHECK(cudaFree(d_score));
+    CHECK(cudaFree(d_seq1));
+    CHECK(cudaFree(d_seq2));
 
     // Print score matrix for debugging
     for (int i = 0; i <= n; ++i) {

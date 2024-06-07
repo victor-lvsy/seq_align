@@ -4,7 +4,25 @@
 #include <algorithm>
 #include <cuda_runtime.h>
 
-#define NUMBER_OF_THREADS 128
+#define NUMBER_OF_THREADS 64
+
+#define CHECK(call)                                                                 \
+  {                                                                                 \
+    const cudaError_t err = call;                                                   \
+    if (err != cudaSuccess) {                                                       \
+      printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__); \
+      exit(EXIT_FAILURE);                                                           \
+    }                                                                               \
+  }
+
+#define CHECK_KERNELCALL()                                                          \
+  {                                                                                 \
+    const cudaError_t err = cudaGetLastError();                                     \
+    if (err != cudaSuccess) {                                                       \
+      printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__); \
+      exit(EXIT_FAILURE);                                                           \
+    }                                                                               \
+  }
 
 __global__ void init_borders(int *d_score, int n, int m, int gap);
 
