@@ -10,8 +10,8 @@ using namespace std;
 int  main( int argc, char ** argv )
 {
         // Sequences to be aligned
-        char  *seq_1;
-        char  *seq_2; 
+        vector<char> seq_1;
+        vector<char> seq_2;
 
         //FILE  *file1 , *file2 ;
         int   size1 , size2 ;
@@ -24,12 +24,11 @@ int  main( int argc, char ** argv )
             size1 = file1.tellg();
             file1.seekg (0, ios::beg);
 
-            seq_1 = (char *) malloc( 2 * size1 * sizeof(char));
-            
-            file1 >> seq_1 ;
+            seq_1.resize(2 * size1);
+            file1.read(&seq_1[0], size1);
             
             file1.close();
-            printf("Seq 1: %s size1: %d\n",seq_1,size1);
+            printf("Seq 1 of size: %d\n",size1);
         }
         
 
@@ -41,12 +40,11 @@ int  main( int argc, char ** argv )
             file2.seekg (0, ios::end);
             size2 = file2.tellg();
             file2.seekg (0, ios::beg);
-            seq_2 = (char *) malloc(  2 * size2 * sizeof(char));
-            
-            file2 >> seq_2 ;
+            seq_2.resize(2 * size2); // resizing the vector
+            file2.read(&seq_2[0], size2);
             
             file2.close();
-            printf("Seq 2: %s size2: %d\n",seq_2,size2);
+            printf("Seq 2 of size: %d\n",size2);
         }
         
 
@@ -55,8 +53,8 @@ int  main( int argc, char ** argv )
     struct timespec t1,t2; double dt1;
     clock_gettime(CLOCK_REALTIME,  &t1);
 
-        const std::string seq_1_std = seq_1;
-        const std::string seq_2_std = seq_2;
+        const std::string seq_1_std(seq_1.begin(), seq_1.begin() + size1);
+        const std::string seq_2_std(seq_2.begin(), seq_2.begin() + size2);
 
         // Get alignment
         nw(seq_1_std, seq_2_std, 1, -1, -1) ;   

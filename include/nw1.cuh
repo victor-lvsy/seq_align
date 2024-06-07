@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cuda_runtime.h>
 
-#define NUMBER_OF_THREADS 1024
+#define NUMBER_OF_THREADS 128
 
 __global__ void init_borders(int *d_score, int n, int m, int gap);
 

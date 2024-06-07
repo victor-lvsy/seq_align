@@ -14,7 +14,7 @@ __global__ void init_borders(int *d_score, int n, int m, int gap) {
 // Kernel for filling the matrix using the anti-diagonal approach
 __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
     int total_diagonals = n + m - 1;
-    int tid = threadIdx.x;
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
     
     for (int diag = 2; diag <= total_diagonals; ++diag) {
         int i = diag - tid;
@@ -30,6 +30,7 @@ __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2
                 )
             );
         }
+        __syncthreads();
     }
 }
 
@@ -55,8 +56,9 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     cudaMemcpy(d_seq2, seq2.data(), m * sizeof(char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_score, h_score, (n + 1) * (m + 1) * sizeof(int), cudaMemcpyHostToDevice);
     
-    int num_threads = max(n, m) + 1;
+    int num_threads = max(n, m);
     int num_blocks = (num_threads + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
+    printf("Number of blocks: %d\nNumber of Threads: %d\n", num_blocks, num_threads);
     
     // Initialize borders of the matrix on GPU
     init_borders<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
@@ -73,12 +75,12 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     cudaFree(d_seq2);
 
     // Print score matrix for debugging
-    // for (int i = 0; i <= n; ++i) {
-    //     for (int j = 0; j <= m; ++j) {
-    //         std::cout << h_score[i * (m + 1) + j] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+    for (int i = 0; i <= n; ++i) {
+        for (int j = 0; j <= m; ++j) {
+            std::cout << h_score[i * (m + 1) + j] << " ";
+        }
+        std::cout << std::endl;
+    }
 
     // Backtracking
     int i = n;
