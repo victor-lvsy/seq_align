@@ -13,10 +13,11 @@ __global__ void init_borders(int *d_score, int n, int m, int gap) {
 
 // Kernel for filling the matrix using the anti-diagonal approach
 __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
+    cooperative_groups::grid_group grid = cooperative_groups::this_grid();
     int total_diagonals = n + m - 1;
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     
-    for (int diag = 2; diag <= total_diagonals; ++diag) {
+    for (int diag = 2; diag <= total_diagonals+1; ++diag) {
         int first_i = max(1, diag - m); // Calculate start i index for the current diagonal
         int last_i = min(n, diag - 1);  // Calculate end i index for the current diagonal
         int elements_in_diag = last_i - first_i + 1; // Number of elements in the current diagonal
@@ -34,7 +35,7 @@ __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2
                         d_score[i * (m + 1) + (j - 1)] + gap));
             }
           }
-        __syncthreads();
+        grid.sync();
     }
 }
 
@@ -70,7 +71,8 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     CHECK(cudaDeviceSynchronize());
     
     // Fill the matrix on GPU
-    fill_matrix<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
+    void* args[] = { &d_score, &d_seq1, &d_seq2, &match, &mismatch, &gap, &n, &m };
+    cudaLaunchCooperativeKernel((void*)fill_matrix, num_blocks, NUMBER_OF_THREADS, args);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
     
@@ -83,12 +85,12 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     CHECK(cudaFree(d_seq2));
 
     // Print score matrix for debugging
-    for (int i = 0; i <= n; ++i) {
-        for (int j = 0; j <= m; ++j) {
-            std::cout << h_score[i * (m + 1) + j] << " ";
-        }
-        std::cout << std::endl;
-    }
+    // for (int i = 0; i <= n; ++i) {
+    //     for (int j = 0; j <= m; ++j) {
+    //         std::cout << h_score[i * (m + 1) + j] << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 
     // Backtracking
     int i = n;

@@ -7,6 +7,10 @@ project(ADN_ALIGN LANGUAGES CXX CUDA)
 set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CXX_STANDARD 14)
 
+# Set debugging flags (only if you are in Debug mode)
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CUDA_FLAGS_DEBUG "-G -g")
+
 # Define the source and include directories
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")

@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <cuda_runtime.h>
+#include <cooperative_groups.h>
 
 #define NUMBER_OF_THREADS 64
 

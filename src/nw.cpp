@@ -27,12 +27,12 @@ void nw(const std::string &seq1, const std::string &seq2, int match, int mismatc
     }
 
     // Print the score matrix for debugging
-    for (int i = 0; i <= n; ++i) {
-        for (int j = 0; j <= m; ++j) {
-            std::cout << score[i][j] << " ";
-        }
-            std::cout << std::endl;
-    }   
+    // for (int i = 0; i <= n; ++i) {
+    //     for (int j = 0; j <= m; ++j) {
+    //         std::cout << score[i][j] << " ";
+    //     }
+    //         std::cout << std::endl;
+    // }   
 
     // Backtracking
     int i = n;
