@@ -1,0 +1,47 @@
+Seq 1 of size: 110
+Seq 2 of size: 110
+Number of CUDA devices: 1
+Device 0: NVIDIA GeForce RTX 4090
+  Compute Capability: 8.9
+  Total Global Memory: 24195 MB
+  Multiprocessor Count: 128
+  Max Threads Per Block: 1024
+  Max Threads Dim: [1024, 1024, 64]
+  Max Grid Size: [2147483647, 65535, 65535]
+
+HELLO THERE, I am nw2
+Size of seq1: 110
+Size of seq2: 110
+Product: 12100
+Number of blocks: 1
+Number of Threads: 110
+Number of blocks: {7}
+Number of Threads: 16
+i: 1, grid size: 1
+i: 2, grid size: 2
+i: 3, grid size: 3
+i: 4, grid size: 4
+i: 5, grid size: 5
+i: 6, grid size: 6
+i: 7, grid size: 7
+i: 8, grid size: 8
+i: 9, grid size: 7, j: 1
+i: 10, grid size: 6, j: 2
+i: 11, grid size: 5, j: 3
+i: 12, grid size: 4, j: 4
+i: 13, grid size: 3, j: 5
+i: 14, grid size: 2, j: 6
+i: 15, grid size: 1, j: 7
+Aligned Sequence 1: -GGGAGGT-G-G-G-AGGTCGGGAGGTG-GGA-GGTCGG--GAGG-TGGGAGGTCGGGAGGTGGGAGGTCA-C-AGGGAGGT-G-G-G-AGGTCGGGAGGTG-GGAGGTCGGGAGGTGGGAGGTCG-A
+Aligned Sequence 2: AGGG-GCTCGCGCGTACGTC--GA--TGCGCATGCT-GGATTAGGCT-TTAGCTAGCGA--T-CGA-TTTATCGAGGG-GCTCGCGCGTACGTC--GA--TGCGCATG-CTGGA-TTAGGCTTTAGCT
+HELLO THERE, i am nw1
+Size of seq1: 110
+Size of seq2: 110
+Product: 12100
+Number of blocks: 1
+Number of Threads: 110
+Aligned Sequence 1: -GGGAGGT-G-G-G-AGGTCGGGAGGTG-GGA-GGTCGG--GAGG-TGGGAGGTCGGGAGGTGGGAGGTCA-C-AGGGAGGT-G-G-G-AGGTCGGGAGGTG-GGAGGTCGGGAGGTGGGAGGTCG-A
+Aligned Sequence 2: AGGG-GCTCGCGCGTACGTC--GA--TGCGCATGCT-GGATTAGGCT-TTAGCTAGCGA--T-CGA-TTTATCGAGGG-GCTCGCGCGTACGTC--GA--TGCGCATG-CTGGA-TTAGGCTTTAGCT
+
+
+  0.001388 kernel Time elapsed 

@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 # Set debugging flags (only if you are in Debug mode)
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CUDA_FLAGS_DEBUG "-G -g")
+set(CMAKE_CUDA_FLAGS_DEBUG "-G -g -O0")
 
 # Define the source and include directories
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")

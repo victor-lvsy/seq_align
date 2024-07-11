@@ -6,6 +6,7 @@
 #include <cooperative_groups.h>
 
 #define NUMBER_OF_THREADS 1024
+#define TILE_SIZE 32
 
 #define CHECK(call)                                                                 \
   {                                                                                 \
@@ -25,8 +26,8 @@
     }                                                                               \
   }
 
-__global__ void init_borders(int *d_score, int n, int m, int gap);
+__global__ void init_borders_v2(int *d_score, int n, int m, int gap);
 
-__global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m);
+__global__ void fill_matrix_v2(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m, int diag_id, int offs);
 
-void nw1(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap);
+void nw2(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap);
