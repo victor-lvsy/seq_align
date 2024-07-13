@@ -1,25 +1,28 @@
-#include "nw2.cuh"
+#include "nw3.cuh"
 
 // Kernel for initializing borders of the score matrix
-__global__ void init_borders_v2(int *d_score, int n, int m, int gap)
+__global__ void init_borders_v3(int *d_score, int n, int m, int gap, int coarsening_factor)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    for(int i=0; i<coarsening_factor;i++){
+        int idx = blockIdx.x * blockDim.x + threadIdx.x + i;
+        // Initialize first column (i.e., vertical border)
+        if (idx <= n)
+        {
+            d_score[idx * (m + 1)] = idx * gap; // Setting gap penalties for the first column
+        }
 
-    // Initialize first column (i.e., vertical border)
-    if (idx <= n)
-    {
-        d_score[idx * (m + 1)] = idx * gap; // Setting gap penalties for the first column
+        // Initialize first row (i.e., horizontal border)
+        if (idx <= m)
+        {
+            d_score[idx] = idx * gap; // Setting gap penalties for the first row
+        }
     }
 
-    // Initialize first row (i.e., horizontal border)
-    if (idx <= m)
-    {
-        d_score[idx] = idx * gap; // Setting gap penalties for the first row
-    }
+    
 }
 
 // Kernel for filling the matrix using the anti-diagonal and tiling approach
-__global__ void fill_matrix_v2(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m, int diag_id, int offs) {
+__global__ void fill_matrix_v3(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m, int diag_id, int offs) {
 
     int tid = threadIdx.x;   // Thread x-index within block
     int bid = blockIdx.x;
@@ -48,13 +51,13 @@ __global__ void fill_matrix_v2(int *d_score, const char *d_seq1, const char *d_s
             }
           }
         __syncthreads(); // Synchronize threads before moving to the next diagonal
-    }
+}
 }
 
 // Host function for Needleman-Wunsch algorithm
-void nw2(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap)
+void nw3(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap)
 {
-    printf("HELLO THERE, I am nw2\n");
+    printf("HELLO THERE, I am nw3\n");
 
     int n = seq1.length();
     int m = seq2.length();
@@ -80,9 +83,11 @@ void nw2(const std::string &seq1, const std::string &seq2, int match, int mismat
 
     // Initialize borders of the matrix on GPU
     int num_threads = max(n, m);
+    int coarsening_factor = 16;
     int num_blocks = (num_threads + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
+    num_blocks = (num_blocks + (coarsening_factor - 1)) / coarsening_factor;
     printf("Number of blocks: %d\nNumber of Threads: %d\n", num_blocks, num_threads);
-    init_borders_v2<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
+    init_borders_v3<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap, coarsening_factor);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
 
@@ -95,13 +100,13 @@ void nw2(const std::string &seq1, const std::string &seq2, int match, int mismat
     for(int i=1; i<=2*grid+1; i++){
         if(i<=grid + 1){
             // printf("i: %d, grid size: %d\n", i, i);
-            fill_matrix_v2<<<i, TILE_SIZE>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m, i - 1, 0);
+            fill_matrix_v3<<<i, TILE_SIZE>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m, i - 1, 0);
             CHECK_KERNELCALL();
             CHECK(cudaDeviceSynchronize());
         }
         else{
             // printf("i: %d, grid size: %d, j: %d\n", i, ((2 * grid + 1 - i) + 1), offs);
-            fill_matrix_v2<<<((2 * grid + 1 - i) + 1), TILE_SIZE>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m, i - 1, offs);
+            fill_matrix_v3<<<((2 * grid + 1 - i) + 1), TILE_SIZE>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m, i - 1, offs);
             CHECK_KERNELCALL();
             CHECK(cudaDeviceSynchronize());
             offs++;
@@ -126,41 +131,41 @@ void nw2(const std::string &seq1, const std::string &seq2, int match, int mismat
     // }
 
     // Backtracking
-    int i = n;
-    int j = m;
-    std::string aligned_seq1, aligned_seq2;
+    // int i = n;
+    // int j = m;
+    // std::string aligned_seq1, aligned_seq2;
 
-    while (i > 0 && j > 0) {
-        if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + (j - 1)] + (seq1[i - 1] == seq2[j - 1] ? match : mismatch)) {
-            aligned_seq1 = seq1[i - 1] + aligned_seq1;
-            aligned_seq2 = seq2[j - 1] + aligned_seq2;
-            --i;
-            --j;
-        } else if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + j] + gap) {
-            aligned_seq1 = seq1[i - 1] + aligned_seq1;
-            aligned_seq2 = "-" + aligned_seq2;
-            --i;
-        } else {
-            aligned_seq1 = "-" + aligned_seq1;
-            aligned_seq2 = seq2[j - 1] + aligned_seq2;
-            --j;
-        }
-    }
+    // while (i > 0 && j > 0) {
+    //     if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + (j - 1)] + (seq1[i - 1] == seq2[j - 1] ? match : mismatch)) {
+    //         aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //         aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //         --i;
+    //         --j;
+    //     } else if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + j] + gap) {
+    //         aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //         aligned_seq2 = "-" + aligned_seq2;
+    //         --i;
+    //     } else {
+    //         aligned_seq1 = "-" + aligned_seq1;
+    //         aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //         --j;
+    //     }
+    // }
 
-    while (i > 0) {
-        aligned_seq1 = seq1[i - 1] + aligned_seq1;
-        aligned_seq2 = "-" + aligned_seq2;
-        --i;
-    }
+    // while (i > 0) {
+    //     aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //     aligned_seq2 = "-" + aligned_seq2;
+    //     --i;
+    // }
 
-    while (j > 0) {
-        aligned_seq1 = "-" + aligned_seq1;
-        aligned_seq2 = seq2[j - 1] + aligned_seq2;
-        --j;
-    }
+    // while (j > 0) {
+    //     aligned_seq1 = "-" + aligned_seq1;
+    //     aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //     --j;
+    // }
 
-    std::cout << "Aligned Sequence 1: " << aligned_seq1 << std::endl;
-    std::cout << "Aligned Sequence 2: " << aligned_seq2 << std::endl;
+    // std::cout << "Aligned Sequence 1: " << aligned_seq1 << std::endl;
+    // std::cout << "Aligned Sequence 2: " << aligned_seq2 << std::endl;
 
     delete[] h_score;
 }

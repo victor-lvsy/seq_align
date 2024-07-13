@@ -4,21 +4,20 @@
 __global__ void init_borders(int *d_score, int n, int m, int gap) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int idx2 = idx * (m + 1);
-    if (idx < n) {
+    if (idx <= n) {
         d_score[idx2] = idx * gap; // Initialize first column
     }
-    if (idx < m) {
+    if (idx <= m) {
         d_score[idx] = idx * gap; // Initialize first row
     }
 }
 
 // Kernel for filling the matrix using the anti-diagonal approach
 __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
-    cooperative_groups::grid_group grid = cooperative_groups::this_grid();
     int total_diagonals = n + m - 1;
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     
-    for (int diag = 2; diag <= total_diagonals+1; ++diag) {
+    for (int diag = 2; diag <= total_diagonals + 1; ++diag) {
         int first_i = max(1, diag - m); // Calculate start i index for the current diagonal
         int last_i = min(n, diag - 1);  // Calculate end i index for the current diagonal
         int elements_in_diag = last_i - first_i + 1; // Number of elements in the current diagonal
@@ -36,7 +35,7 @@ __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2
                         d_score[i * (m + 1) + (j - 1)] + gap));
             }
           }
-        grid.sync();
+        __syncthreads();
     }
 }
 
@@ -77,8 +76,9 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     CHECK(cudaDeviceSynchronize());
     
     // Fill the matrix on GPU
-    void* args[] = { &d_score, &d_seq1, &d_seq2, &match, &mismatch, &gap, &n, &m };
-    cudaLaunchCooperativeKernel((void*)fill_matrix, num_blocks, NUMBER_OF_THREADS, args);
+    // void* args[] = { &d_score, &d_seq1, &d_seq2, &match, &mismatch, &gap, &n, &m };
+    // cudaLaunchCooperativeKernel((void*)fill_matrix, num_blocks, NUMBER_OF_THREADS, args);
+    fill_matrix<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
     
@@ -91,49 +91,49 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     CHECK(cudaFree(d_seq2));
 
     // Print score matrix for debugging
-    // for (int i = 0; i <= 48; ++i) {
-    //     for (int j = 0; j <= 48; ++j) {
+    // for (int i = 0; i <= n; ++i) {
+    //     for (int j = 0; j <= n; ++j) {
     //         std::cout << h_score[i * (m + 1) + j] << " ";
     //     }
     //     std::cout << std::endl;
     // }
 
     // Backtracking
-    int i = n;
-    int j = m;
-    std::string aligned_seq1, aligned_seq2;
+    // int i = n;
+    // int j = m;
+    // std::string aligned_seq1, aligned_seq2;
 
-    while (i > 0 && j > 0) {
-        if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + (j - 1)] + (seq1[i - 1] == seq2[j - 1] ? match : mismatch)) {
-            aligned_seq1 = seq1[i - 1] + aligned_seq1;
-            aligned_seq2 = seq2[j - 1] + aligned_seq2;
-            --i;
-            --j;
-        } else if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + j] + gap) {
-            aligned_seq1 = seq1[i - 1] + aligned_seq1;
-            aligned_seq2 = "-" + aligned_seq2;
-            --i;
-        } else {
-            aligned_seq1 = "-" + aligned_seq1;
-            aligned_seq2 = seq2[j - 1] + aligned_seq2;
-            --j;
-        }
-    }
+    // while (i > 0 && j > 0) {
+    //     if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + (j - 1)] + (seq1[i - 1] == seq2[j - 1] ? match : mismatch)) {
+    //         aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //         aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //         --i;
+    //         --j;
+    //     } else if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + j] + gap) {
+    //         aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //         aligned_seq2 = "-" + aligned_seq2;
+    //         --i;
+    //     } else {
+    //         aligned_seq1 = "-" + aligned_seq1;
+    //         aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //         --j;
+    //     }
+    // }
 
-    while (i > 0) {
-        aligned_seq1 = seq1[i - 1] + aligned_seq1;
-        aligned_seq2 = "-" + aligned_seq2;
-        --i;
-    }
+    // while (i > 0) {
+    //     aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //     aligned_seq2 = "-" + aligned_seq2;
+    //     --i;
+    // }
 
-    while (j > 0) {
-        aligned_seq1 = "-" + aligned_seq1;
-        aligned_seq2 = seq2[j - 1] + aligned_seq2;
-        --j;
-    }
+    // while (j > 0) {
+    //     aligned_seq1 = "-" + aligned_seq1;
+    //     aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //     --j;
+    // }
 
-    std::cout << "Aligned Sequence 1: " << aligned_seq1 << std::endl;
-    std::cout << "Aligned Sequence 2: " << aligned_seq2 << std::endl;
+    // std::cout << "Aligned Sequence 1: " << aligned_seq1 << std::endl;
+    // std::cout << "Aligned Sequence 2: " << aligned_seq2 << std::endl;
 
     delete[] h_score;
 }

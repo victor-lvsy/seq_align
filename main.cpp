@@ -4,7 +4,10 @@
 #include <time.h>
 #include "include/nw.h"
 #include "include/nw1.cuh"
+#include "include/nw4.cuh"
+#include "include/nw3.cuh"
 #include "include/nw2.cuh"
+
 
 using namespace std;
 
@@ -48,7 +51,7 @@ int  main( int argc, char ** argv )
 
         //FILE  *file1 , *file2 ;
         int   size1 , size2 ;
-        ifstream file1("./test_files/s1.txt");
+        ifstream file1("./test_files/test1.txt");
         if (file1.fail())
              perror ("Error opening file 1");
         else
@@ -65,7 +68,7 @@ int  main( int argc, char ** argv )
         }
         
 
-        ifstream file2("./test_files/s2.txt");
+        ifstream file2("./test_files/test2.txt");
         if (file2.fail())
              perror ("Error opening file 2");
         else
@@ -99,9 +102,11 @@ int  main( int argc, char ** argv )
 
     printDeviceProperties();
 
-    nw2(seq_1_std, seq_2_std, 1, -1, -1);
+    // nw4(seq_1_std, seq_2_std, 1, -1, -1);
 
-    // nw1(seq_1_std, seq_2_std, 1, -1, -1);
+    // nw2(seq_1_std, seq_2_std, 1, -1, -1);
+
+    nw1(seq_1_std, seq_2_std, 1, -1, -1);
 
     printf("\n\n%10f kernel Time elapsed \n", time);
 
