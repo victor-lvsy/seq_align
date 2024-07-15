@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <cooperative_groups.h>
 
-#define NUMBER_OF_THREADS 1024
+#define NUMBER_OF_THREADS 64
 
 #define CHECK(call)                                                                 \
   {                                                                                 \

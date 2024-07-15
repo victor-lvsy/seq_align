@@ -126,41 +126,41 @@ void nw2(const std::string &seq1, const std::string &seq2, int match, int mismat
     // }
 
     // Backtracking
-    int i = n;
-    int j = m;
-    std::string aligned_seq1, aligned_seq2;
+    // int i = n;
+    // int j = m;
+    // std::string aligned_seq1, aligned_seq2;
 
-    while (i > 0 && j > 0) {
-        if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + (j - 1)] + (seq1[i - 1] == seq2[j - 1] ? match : mismatch)) {
-            aligned_seq1 = seq1[i - 1] + aligned_seq1;
-            aligned_seq2 = seq2[j - 1] + aligned_seq2;
-            --i;
-            --j;
-        } else if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + j] + gap) {
-            aligned_seq1 = seq1[i - 1] + aligned_seq1;
-            aligned_seq2 = "-" + aligned_seq2;
-            --i;
-        } else {
-            aligned_seq1 = "-" + aligned_seq1;
-            aligned_seq2 = seq2[j - 1] + aligned_seq2;
-            --j;
-        }
-    }
+    // while (i > 0 && j > 0) {
+    //     if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + (j - 1)] + (seq1[i - 1] == seq2[j - 1] ? match : mismatch)) {
+    //         aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //         aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //         --i;
+    //         --j;
+    //     } else if (h_score[i * (m + 1) + j] == h_score[(i - 1) * (m + 1) + j] + gap) {
+    //         aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //         aligned_seq2 = "-" + aligned_seq2;
+    //         --i;
+    //     } else {
+    //         aligned_seq1 = "-" + aligned_seq1;
+    //         aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //         --j;
+    //     }
+    // }
 
-    while (i > 0) {
-        aligned_seq1 = seq1[i - 1] + aligned_seq1;
-        aligned_seq2 = "-" + aligned_seq2;
-        --i;
-    }
+    // while (i > 0) {
+    //     aligned_seq1 = seq1[i - 1] + aligned_seq1;
+    //     aligned_seq2 = "-" + aligned_seq2;
+    //     --i;
+    // }
 
-    while (j > 0) {
-        aligned_seq1 = "-" + aligned_seq1;
-        aligned_seq2 = seq2[j - 1] + aligned_seq2;
-        --j;
-    }
+    // while (j > 0) {
+    //     aligned_seq1 = "-" + aligned_seq1;
+    //     aligned_seq2 = seq2[j - 1] + aligned_seq2;
+    //     --j;
+    // }
 
-    std::cout << "Aligned Sequence 1: " << aligned_seq1 << std::endl;
-    std::cout << "Aligned Sequence 2: " << aligned_seq2 << std::endl;
+    // std::cout << "Aligned Sequence 1: " << aligned_seq1 << std::endl;
+    // std::cout << "Aligned Sequence 2: " << aligned_seq2 << std::endl;
 
     delete[] h_score;
 }

@@ -5,7 +5,6 @@
 #include <cuda_runtime.h>
 
 #define NUMBER_OF_THREADS 1024
-#define TILE_SIZE 32
 
 #define CHECK(call)                                                                 \
   {                                                                                 \
@@ -25,8 +24,9 @@
     }                                                                               \
   }
 
-__global__ void init_borders_v4(int *d_score, int n, int m, int gap);
 
-__global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m);
+__global__ void init_borders_v6(int *d_score, int n, int gap);
 
-void nw4(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap);
+__global__ void fill_matrix_v6(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m);
+
+void nw6(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap);

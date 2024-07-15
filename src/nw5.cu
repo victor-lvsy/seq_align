@@ -1,7 +1,7 @@
-#include "nw4.cuh"
+#include "nw5.cuh"
 
 // Kernel for initializing borders of the score matrix
-__global__ void init_borders_v4(int *d_score, int n, int m, int gap)
+__global__ void init_borders_v5(int *d_score, int n, int m, int gap)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_diagonals = n + m + 1;
@@ -27,7 +27,8 @@ __global__ void init_borders_v4(int *d_score, int n, int m, int gap)
 }
 
 // Kernel for filling the matrix using the anti-diagonal approach
-__global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
+__global__ void fill_matrix_v5(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
+    extern __shared__ char s[];
     const int total_diagonals = n + m - 1;
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
     int first_i, last_i, elements_in_diag, i, j;
@@ -42,17 +43,23 @@ __global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_s
             i = last_i - tid; // Mapping tid to i
             j = diag - i; // Mapping i to j
 
+            if(tid == 0 && diag <= n + 1){
+                s[i - 1] = d_seq1[i - 1];
+            }
+            if(tid == diag - 2 && diag <= n + 1){
+                s[j - 1 + n] = d_seq2[j - 1];
+            }
+
             int linear_index = idx + tid;
             int linear_index_l = mem + tid;
             int linear_index_t = (diag <= n) ? linear_index_l - 1 : linear_index_l + 1;
             int linear_index_tl = (diag <= n + 1) ? mem2 + tid - 1 : ((diag == n + 2) ? mem2 + tid : mem2 + tid + 1 );
             if (linear_index <= (n + 1) * (m + 1)) {
-                int match_score = (d_seq1[i - 1] == d_seq2[j - 1]) ? match : mismatch;
-                d_score[linear_index] = max(
+                int match_score = (s[i - 1] == s[j - 1 + n]) ? match : mismatch;
+                d_score[linear_index] =  max(
                     d_score[linear_index_tl] + match_score,
-                    max(
-                        d_score[linear_index_l] + gap,
-                        d_score[linear_index_t] + gap));
+                    max(d_score[linear_index_l] + gap,
+                    d_score[linear_index_t] + gap));
             }
         }
         mem2 = mem;
@@ -69,7 +76,7 @@ __global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_s
 }
 
 // Function to convert a diagonal-major format matrix to row-major format
-void convertDiagonalToRowMajor(int* diagMajorMatrix, int n, int m, int* rowMajorMatrix) {
+void convertDiagonalToRowMajor2(int* diagMajorMatrix, int n, int m, int* rowMajorMatrix) {
     int total_diagonals = n + m - 1;
     int idx = 0;
     for (int diag = 0; diag <= total_diagonals + 1; ++diag) {
@@ -94,9 +101,9 @@ void convertDiagonalToRowMajor(int* diagMajorMatrix, int n, int m, int* rowMajor
 
 
 // Host function for Needleman-Wunsch algorithm
-void nw4(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap)
+void nw5(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap)
 {
-    printf("HELLO THERE, I am nw4\n");
+    printf("HELLO THERE, I am nw5\n");
 
     int n = seq1.length();
     int m = seq2.length();
@@ -125,13 +132,13 @@ void nw4(const std::string &seq1, const std::string &seq2, int match, int mismat
     int num_threads = max(n, m);
     int num_blocks = (num_threads + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
     printf("Number of blocks: %d\nNumber of Threads: %d\n", num_blocks, num_threads);
-    init_borders_v4<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
+    init_borders_v5<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
 
 
     // Fill the matrix on GPU
-    fill_matrix_v4<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
+    fill_matrix_v5<<<num_blocks, NUMBER_OF_THREADS, (n+m) * sizeof(char)>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
         
@@ -151,7 +158,7 @@ void nw4(const std::string &seq1, const std::string &seq2, int match, int mismat
  
 
     // Print score matrix for debugging
-    // convertDiagonalToRowMajor(h_score,n,m,h_score_r);
+    // convertDiagonalToRowMajor2(h_score,n,m,h_score_r);
 
     // std::cout << std::endl;
     // std::cout << std::endl;

@@ -14,6 +14,7 @@ __global__ void init_borders(int *d_score, int n, int m, int gap) {
 
 // Kernel for filling the matrix using the anti-diagonal approach
 __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
+    cooperative_groups::grid_group grid = cooperative_groups::this_grid();
     int total_diagonals = n + m - 1;
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     
@@ -35,7 +36,7 @@ __global__ void fill_matrix(int *d_score, const char *d_seq1, const char *d_seq2
                         d_score[i * (m + 1) + (j - 1)] + gap));
             }
           }
-        __syncthreads();
+        grid.sync();
     }
 }
 
@@ -76,9 +77,8 @@ void nw1(const std::string &seq1, const std::string &seq2, int match, int mismat
     CHECK(cudaDeviceSynchronize());
     
     // Fill the matrix on GPU
-    // void* args[] = { &d_score, &d_seq1, &d_seq2, &match, &mismatch, &gap, &n, &m };
-    // cudaLaunchCooperativeKernel((void*)fill_matrix, num_blocks, NUMBER_OF_THREADS, args);
-    fill_matrix<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
+    void* args[] = { &d_score, &d_seq1, &d_seq2, &match, &mismatch, &gap, &n, &m };
+    cudaLaunchCooperativeKernel((void*)fill_matrix, num_blocks, NUMBER_OF_THREADS, args);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
     

@@ -1,10 +1,20 @@
-#include "nw4.cuh"
+#include "nw6.cuh"
+
+__global__ void kernel_launcher(int *d_score, char *d_seq1, char *d_seq2, int match, int mismatch, int gap, int n, int m){
+    int tid = threadIdx.x, number_of_subthreads = NUMBER_OF_THREADS;
+    int *test = d_score + tid * (number_of_subthreads * number_of_subthreads);
+    char *seq1 = d_seq1 + tid * number_of_subthreads;
+    char *seq2 = d_seq2 + tid * number_of_subthreads;
+
+    init_borders_v6<<<1, number_of_subthreads>>>(test, number_of_subthreads, gap);
+    fill_matrix_v6<<<1, number_of_subthreads>>>(test, seq1, seq2, match, mismatch, gap, number_of_subthreads - 1, number_of_subthreads - 1);
+}
 
 // Kernel for initializing borders of the score matrix
-__global__ void init_borders_v4(int *d_score, int n, int m, int gap)
+__global__ void init_borders_v6(int *d_score, int n, int gap)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int total_diagonals = n + m + 1;
+    int idx = threadIdx.x;
+    int total_diagonals = n;
     
     // Initialize diagonals for the border elements
     if (idx < total_diagonals) {
@@ -16,7 +26,7 @@ __global__ void init_borders_v4(int *d_score, int n, int m, int gap)
             d_score[pos] = idx * gap; // Setting gap penalties for the first column
         }
 
-        if (idx <= m) {
+        if (idx <= n) {
             // Initialize first row elements
             int diag_index = idx;
             int diag_position = idx;
@@ -27,9 +37,9 @@ __global__ void init_borders_v4(int *d_score, int n, int m, int gap)
 }
 
 // Kernel for filling the matrix using the anti-diagonal approach
-__global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
+__global__ void fill_matrix_v6(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m) {
     const int total_diagonals = n + m - 1;
-    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    const int tid = threadIdx.x;
     int first_i, last_i, elements_in_diag, i, j;
     int idx = 4, mem = 2, mem2 = 1;
     
@@ -42,6 +52,7 @@ __global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_s
             i = last_i - tid; // Mapping tid to i
             j = diag - i; // Mapping i to j
 
+            // Create the linear indexes related to the antidiagonal memory accesses.
             int linear_index = idx + tid;
             int linear_index_l = mem + tid;
             int linear_index_t = (diag <= n) ? linear_index_l - 1 : linear_index_l + 1;
@@ -69,21 +80,22 @@ __global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_s
 }
 
 // Function to convert a diagonal-major format matrix to row-major format
-void convertDiagonalToRowMajor(int* diagMajorMatrix, int n, int m, int* rowMajorMatrix) {
-    int total_diagonals = n + m - 1;
+void convertDiagonalToRowMajor3(int* diagMajorMatrix, int n, int* rowMajorMatrix) {
+    n -= 1;
+    int total_diagonals = 2*n - 1;
     int idx = 0;
     for (int diag = 0; diag <= total_diagonals + 1; ++diag) {
-        int first_i = max(0, diag - m); // Calculate start i index for the current diagonal
+        int first_i = max(0, diag - n); // Calculate start i index for the current diagonal
         int last_i = min(n, diag);  // Calculate end i index for the current diagonal
         int elements_in_diag = last_i - first_i; // Number of elements in the current diagonal
         if(diag > n){
             for(int i = 0; i <= elements_in_diag; i++){
-                rowMajorMatrix[(n - i) * (m+1) + (diag - (n - i))] = diagMajorMatrix[idx + i];
+                rowMajorMatrix[(n - i) * (n+1) + (diag - (n - i))] = diagMajorMatrix[idx + i];
             }
         }
         else{
             for(int i = 0; i <= elements_in_diag; i++){
-                rowMajorMatrix[((elements_in_diag - i) * (m+1)) + i] = diagMajorMatrix[idx + i];
+                rowMajorMatrix[(i * (n+1)) + (elements_in_diag - i)] = diagMajorMatrix[idx + i];
             }
         }
         
@@ -94,7 +106,7 @@ void convertDiagonalToRowMajor(int* diagMajorMatrix, int n, int m, int* rowMajor
 
 
 // Host function for Needleman-Wunsch algorithm
-void nw4(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap)
+void nw6(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap)
 {
     printf("HELLO THERE, I am nw4\n");
 
@@ -121,19 +133,33 @@ void nw4(const std::string &seq1, const std::string &seq2, int match, int mismat
     CHECK(cudaMemcpy(d_seq2, seq2.data(), m * sizeof(char), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_score, h_score, (n + 1) * (m + 1) * sizeof(int), cudaMemcpyHostToDevice));
 
-    // Initialize borders of the matrix on GPU
-    int num_threads = max(n, m);
-    int num_blocks = (num_threads + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
-    printf("Number of blocks: %d\nNumber of Threads: %d\n", num_blocks, num_threads);
-    init_borders_v4<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
+    cudaStream_t stream1, stream2;
+    cudaStreamCreate(&stream1);
+    cudaStreamCreate(&stream2);
+
+    int num_threads = (n + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
+    printf("Number of Threads: %d\n", num_threads);
+    kernel_launcher<<<1, num_threads,0,stream1>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
+    kernel_launcher<<<1, num_threads,0,stream2>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
     CHECK_KERNELCALL();
     CHECK(cudaDeviceSynchronize());
+    cudaStreamDestroy(stream1);
+    cudaStreamDestroy(stream2);
+
+
+    // Initialize borders of the matrix on GPU
+    // int num_threads = max(n, m);
+    // int num_blocks = (num_threads + (NUMBER_OF_THREADS - 1)) / NUMBER_OF_THREADS;
+    // printf("Number of blocks: %d\nNumber of Threads: %d\n", num_blocks, num_threads);
+    // init_borders_v6<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, n, m, gap);
+    // CHECK_KERNELCALL();
+    // CHECK(cudaDeviceSynchronize());
 
 
     // Fill the matrix on GPU
-    fill_matrix_v4<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
-    CHECK_KERNELCALL();
-    CHECK(cudaDeviceSynchronize());
+    // fill_matrix_v6<<<num_blocks, NUMBER_OF_THREADS>>>(d_score, d_seq1, d_seq2, match, mismatch, gap, n, m);
+    // CHECK_KERNELCALL();
+    // CHECK(cudaDeviceSynchronize());
         
 
     // Copy score matrix back to CPU from GPU
@@ -148,18 +174,31 @@ void nw4(const std::string &seq1, const std::string &seq2, int match, int mismat
     // for (int i = 0; i <= (m+1)*(n+1); ++i) {
     //     std::cout << h_score[i] << " ";
     // }
- 
+
+    // int *h_score2 = h_score + NUMBER_OF_THREADS*NUMBER_OF_THREADS;
 
     // Print score matrix for debugging
-    // convertDiagonalToRowMajor(h_score,n,m,h_score_r);
+    // convertDiagonalToRowMajor3(h_score,NUMBER_OF_THREADS,h_score_r);
 
     // std::cout << std::endl;
     // std::cout << std::endl;
 
     // Print the row-major matrix
-    // for (int i = 0; i <= n; ++i) {
-    //     for (int j = 0; j <= n; ++j) {
-    //         std::cout << h_score_r[i * (m+1) + j] << " ";
+    // for (int i = 0; i < NUMBER_OF_THREADS; ++i) {
+    //     for (int j = 0; j < NUMBER_OF_THREADS; ++j) {
+    //         std::cout << h_score_r[i * (NUMBER_OF_THREADS) + j] << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    // std::cout << std::endl;
+    // std::cout << std::endl;
+
+    // convertDiagonalToRowMajor3(h_score2,NUMBER_OF_THREADS,h_score_r);
+
+    // for (int i = 0; i < NUMBER_OF_THREADS; ++i) {
+    //     for (int j = 0; j < NUMBER_OF_THREADS; ++j) {
+    //         std::cout << h_score_r[i * (NUMBER_OF_THREADS) + j] << " ";
     //     }
     //     std::cout << std::endl;
     // }

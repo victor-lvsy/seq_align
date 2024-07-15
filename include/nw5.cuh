@@ -25,8 +25,9 @@
     }                                                                               \
   }
 
-__global__ void init_borders_v4(int *d_score, int n, int m, int gap);
 
-__global__ void fill_matrix_v4(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m);
+__global__ void init_borders_v5(int *d_score, int n, int m, int gap);
 
-void nw4(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap);
+__global__ void fill_matrix_v5(int *d_score, const char *d_seq1, const char *d_seq2, int match, int mismatch, int gap, int n, int m);
+
+void nw5(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap);
