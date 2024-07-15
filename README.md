@@ -53,7 +53,8 @@ This repository includes seven different implementations of the Needleman-Wunsch
    - **Efficiency loss**: Can't process sequences longer than the number of thread in a block.
 
 7. **nw6.cu**:
-   - **Description**: Implements dynamic kernel launches to maximize GPU utilization. Disclaimer: This is a simplified version of the algorithm, as longer sequences are split and processed independently.
+   - **Description**: Implements dynamic kernel launches to maximize GPU utilization. 
    - **Purpose**: Maximize GPU usage and explore dynamic kernel launch capabilities.
+   - **Efficiency loss**: This is a simplified version of the algorithm, as longer sequences are split and processed independently.
 
 
