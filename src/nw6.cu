@@ -1,5 +1,9 @@
 #include "nw6.cuh"
 
+// Dynamic kernel launches to maximize gpu usage. 
+// Disclaimer: This is a simplifed version of the algorithm because longer sequences are split 
+// and processed without codependances.
+
 __global__ void kernel_launcher(int *d_score, char *d_seq1, char *d_seq2, int match, int mismatch, int gap, int n, int m){
     int tid = threadIdx.x, number_of_subthreads = NUMBER_OF_THREADS;
     int *test = d_score + tid * (number_of_subthreads * number_of_subthreads);

@@ -1,5 +1,9 @@
 #include "nw1.cuh"
 
+/* Basic implementation of the Needleman-Wunsch algorithm in CUDA, using grid.sync()
+ to bypass block synchronization issues due to the anti-diagnal depandancie of the 
+ algorithm*/
+
 // Kernel for initializing borders of the score matrix
 __global__ void init_borders(int *d_score, int n, int m, int gap) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;

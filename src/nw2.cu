@@ -1,5 +1,8 @@
 #include "nw2.cuh"
 
+/* Tiling implementation to reduce the number of idle threads during runtime.
+*/
+
 // Kernel for initializing borders of the score matrix
 __global__ void init_borders_v2(int *d_score, int n, int m, int gap)
 {

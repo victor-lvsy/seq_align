@@ -1,5 +1,6 @@
 #include "nw.h"
 
+// Sequential implementation of the needleman-wunsch algorithm on CPU
 
 void nw(const std::string &seq1, const std::string &seq2, int match, int mismatch, int gap) {
 

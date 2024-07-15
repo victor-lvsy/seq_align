@@ -1,5 +1,7 @@
 #include "nw4.cuh"
 
+// Anti-diagonal memory accesses for coalescent memaory access.
+
 // Kernel for initializing borders of the score matrix
 __global__ void init_borders_v4(int *d_score, int n, int m, int gap)
 {

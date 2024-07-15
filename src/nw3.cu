@@ -1,5 +1,7 @@
 #include "nw3.cuh"
 
+// Test of a coarsening approach for the initialisation phase of the score matrix
+
 // Kernel for initializing borders of the score matrix
 __global__ void init_borders_v3(int *d_score, int n, int m, int gap, int coarsening_factor)
 {

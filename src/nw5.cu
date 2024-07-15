@@ -1,5 +1,7 @@
 #include "nw5.cuh"
 
+// Use of the shared memory to store the DNA sequences.
+
 // Kernel for initializing borders of the score matrix
 __global__ void init_borders_v5(int *d_score, int n, int m, int gap)
 {
