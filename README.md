@@ -2,7 +2,7 @@
 
 ## Project Overview
 This project is part of the GPU and Heterogeneous Systems course at Politecnico di Milano. The goal is to implement and compare various approaches for DNA sequence alignment using CUDA.
-
+This project is based on the https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm wikipedia page.
 ## Author
 **Victor LEVESY**
 
